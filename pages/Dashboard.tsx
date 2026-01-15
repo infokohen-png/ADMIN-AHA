@@ -22,16 +22,23 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
+    
+    // We only filter by platform in the query to avoid the need for a composite index.
+    // Date filtering is handled client-side in the onSnapshot callback.
     const q = query(
       omsetPeciCol, 
-      where('platform', '==', platform),
-      where('date', '>=', startDate),
-      where('date', '<=', endDate)
+      where('platform', '==', platform)
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SalesRecord));
+      const data = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as SalesRecord))
+        // Client-side date filtering to resolve index error
+        .filter(record => record.date >= startDate && record.date <= endDate);
+
+      // Sort: Chronological for charts
       data.sort((a, b) => a.date.localeCompare(b.date));
+      
       setSalesData(data);
       setLoading(false);
     }, (error) => {
